@@ -67,15 +67,14 @@ mit einer klaren Meldung ab, wenn etwas fehlt.
 
 ## Schnellstart
 
-> **Wichtig:** Ersetze `DEIN-USER/tastyigniter-proxmox` durch deinen
-> GitHub-Fork. Der Installer lädt den Rest des Repositories über
-> `GITHUB_REPO` nach. Wenn du den Fork-Namen nicht im Script ändern willst,
-> setze `GITHUB_REPO` einfach vor den Befehl.
+> Der Installer lädt den Rest des Repositories über `GITHUB_REPO` nach. Der
+> Standard zeigt bereits auf dieses Repository, deshalb genügt der
+> Einzeiler. Bei einem eigenen Fork einfach `GITHUB_REPO` voranstellen.
 
 ### 1. Installation auf dem Proxmox-Host
 
 ```bash
-GITHUB_REPO=DEIN-USER/tastyigniter-proxmox bash -c "$(wget -qLO - https://raw.githubusercontent.com/DEIN-USER/tastyigniter-proxmox/main/install/tastyigniter.sh)"
+bash -c "$(wget -qLO - https://raw.githubusercontent.com/HatchetMan111/TastyIgniter-RestaurantSoftware-Proxmox/main/install/tastyigniter.sh)"
 ```
 
 Das Script:
@@ -126,13 +125,13 @@ Das Script:
 ### 3. Container-ID selbst wählen
 
 ```bash
-CT_ID=150 GITHUB_REPO=DEIN-USER/tastyigniter-proxmox bash -c "$(wget -qLO - https://raw.githubusercontent.com/DEIN-USER/tastyigniter-proxmox/main/install/tastyigniter.sh)"
+CT_ID=150 bash -c "$(wget -qLO - https://raw.githubusercontent.com/HatchetMan111/TastyIgniter-RestaurantSoftware-Proxmox/main/install/tastyigniter.sh)"
 ```
 
 Alternativ als Argument:
 
 ```bash
-GITHUB_REPO=DEIN-USER/tastyigniter-proxmox bash -c "$(wget -qLO - https://raw.githubusercontent.com/DEIN-USER/tastyigniter-proxmox/main/install/tastyigniter.sh)" -- --ctid=150
+bash -c "$(wget -qLO - https://raw.githubusercontent.com/HatchetMan111/TastyIgniter-RestaurantSoftware-Proxmox/main/install/tastyigniter.sh)" -- --ctid=150
 ```
 
 Ist die ID bereits durch einen anderen Container oder eine VM belegt, bricht
@@ -160,7 +159,7 @@ erneuter Lauf ist damit idempotent.
 | `var_unprivileged` | `1` | unprivileged Container |
 | `var_ip` / `var_gw` / `var_cidr` | – | optionale statische IP |
 | `var_vlan` | – | optionales VLAN-Tag |
-| `GITHUB_REPO` | `DEIN-USER/tastyigniter-proxmox` | Fork für den Payload-Download |
+| `GITHUB_REPO` | `HatchetMan111/TastyIgniter-RestaurantSoftware-Proxmox` | Quelle für den Payload-Download (bei Fork ändern) |
 | `GITHUB_BRANCH` | `main` | Branch des Forks |
 | `DEBUG` | `0` | `1` = vollständiger `bash -x`-Trace |
 | `FORCE` | `0` | `1` = bestehende fremde CT-ID überschreiben / Uninstall ohne Rückfrage |
@@ -172,8 +171,7 @@ CT_ID=150 \
 var_cpu=4 var_ram=4096 var_disk=16 \
 var_ip=192.168.1.50 var_gw=192.168.1.1 var_cidr=24 \
 var_web_port=8081 var_restaurant_name="Pizza Roma" \
-GITHUB_REPO=DEIN-USER/tastyigniter-proxmox \
-bash -c "$(wget -qLO - https://raw.githubusercontent.com/DEIN-USER/tastyigniter-proxmox/main/install/tastyigniter.sh)"
+bash -c "$(wget -qLO - https://raw.githubusercontent.com/HatchetMan111/TastyIgniter-RestaurantSoftware-Proxmox/main/install/tastyigniter.sh)"
 ```
 
 ---
@@ -205,7 +203,7 @@ Admin-E-Mail und Admin-Passwort. Sie hat `chmod 600`.
 ### Update
 
 ```bash
-GITHUB_REPO=DEIN-USER/tastyigniter-proxmox bash -c "$(wget -qLO - https://raw.githubusercontent.com/DEIN-USER/tastyigniter-proxmox/main/install/tastyigniter.sh)" -- update
+bash -c "$(wget -qLO - https://raw.githubusercontent.com/HatchetMan111/TastyIgniter-RestaurantSoftware-Proxmox/main/install/tastyigniter.sh)" -- update
 ```
 
 Das Update:
@@ -224,7 +222,7 @@ für Core-Updates ist `igniter:update` zuständig.
 ### Status
 
 ```bash
-GITHUB_REPO=DEIN-USER/tastyigniter-proxmox bash -c "$(wget -qLO - https://raw.githubusercontent.com/DEIN-USER/tastyigniter-proxmox/main/install/tastyigniter.sh)" -- status
+bash -c "$(wget -qLO - https://raw.githubusercontent.com/HatchetMan111/TastyIgniter-RestaurantSoftware-Proxmox/main/install/tastyigniter.sh)" -- status
 ```
 
 Zeigt CT-ID, Hostname, Zustand, IP, URLs sowie `is-active` und HTTP-Codes für
@@ -233,13 +231,13 @@ Storefront, Admin und Dashboard.
 ### Deinstallation
 
 ```bash
-GITHUB_REPO=DEIN-USER/tastyigniter-proxmox bash -c "$(wget -qLO - https://raw.githubusercontent.com/DEIN-USER/tastyigniter-proxmox/main/install/tastyigniter.sh)" -- uninstall
+bash -c "$(wget -qLO - https://raw.githubusercontent.com/HatchetMan111/TastyIgniter-RestaurantSoftware-Proxmox/main/install/tastyigniter.sh)" -- uninstall
 ```
 
 Zur Sicherheit muss `DELETE <CT-ID>` eingegeben werden. Ohne Rückfrage:
 
 ```bash
-FORCE=1 GITHUB_REPO=DEIN-USER/tastyigniter-proxmox bash -c "$(wget -qLO - https://raw.githubusercontent.com/DEIN-USER/tastyigniter-proxmox/main/install/tastyigniter.sh)" -- uninstall
+FORCE=1 bash -c "$(wget -qLO - https://raw.githubusercontent.com/HatchetMan111/TastyIgniter-RestaurantSoftware-Proxmox/main/install/tastyigniter.sh)" -- uninstall
 ```
 
 ---
@@ -421,7 +419,7 @@ pct exec 123 -- tail -n 100 /var/log/nginx/tastyigniter-error.log
 Vollständiger Trace:
 
 ```bash
-DEBUG=1 GITHUB_REPO=DEIN-USER/tastyigniter-proxmox bash -c "$(wget -qLO - https://raw.githubusercontent.com/DEIN-USER/tastyigniter-proxmox/main/install/tastyigniter.sh)"
+DEBUG=1 bash -c "$(wget -qLO - https://raw.githubusercontent.com/HatchetMan111/TastyIgniter-RestaurantSoftware-Proxmox/main/install/tastyigniter.sh)"
 ```
 
 ### Domain oder Reverse Proxy
@@ -441,7 +439,7 @@ Den Reverse Proxy auf `http://<CT-IP>:8080` zeigen lassen und
 ### Port ändern
 
 ```bash
-GITHUB_REPO=DEIN-USER/tastyigniter-proxmox bash -c "$(wget -qLO - https://raw.githubusercontent.com/DEIN-USER/tastyigniter-proxmox/main/install/tastyigniter.sh)" -- update --port=9090
+bash -c "$(wget -qLO - https://raw.githubusercontent.com/HatchetMan111/TastyIgniter-RestaurantSoftware-Proxmox/main/install/tastyigniter.sh)" -- update --port=9090
 ```
 
 Der neue Port wird in `/etc/default/tastyigniter` gespeichert und bei

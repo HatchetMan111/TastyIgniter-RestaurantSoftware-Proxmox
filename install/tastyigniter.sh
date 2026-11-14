@@ -2,9 +2,8 @@
 #
 # TastyIgniter – Proxmox VE Community-Script style installer
 #
-# One-liner (replace DEIN-USER/tastyigniter-proxmox with your repository):
-#   GITHUB_REPO=DEIN-USER/tastyigniter-proxmox \
-#     bash -c "$(wget -qLO - https://raw.githubusercontent.com/DEIN-USER/tastyigniter-proxmox/main/install/tastyigniter.sh)"
+# One-liner:
+#   bash -c "$(wget -qLO - https://raw.githubusercontent.com/HatchetMan111/TastyIgniter-RestaurantSoftware-Proxmox/main/install/tastyigniter.sh)"
 #
 # Actions:
 #   install     Create or update a TastyIgniter LXC (default)
@@ -25,7 +24,7 @@ set -Eeuo pipefail
 # ---------------------------------------------------------------------------
 APP="TastyIgniter"
 APP_DESCRIPTION="Open-source restaurant ordering and management system"
-GITHUB_REPO="${GITHUB_REPO:-DEIN-USER/tastyigniter-proxmox}"
+GITHUB_REPO="${GITHUB_REPO:-HatchetMan111/TastyIgniter-RestaurantSoftware-Proxmox}"
 GITHUB_BRANCH="${GITHUB_BRANCH:-main}"
 REPO_TARBALL_URL="${REPO_TARBALL_URL:-https://codeload.github.com/${GITHUB_REPO}/tar.gz/refs/heads/${GITHUB_BRANCH}}"
 
@@ -411,8 +410,8 @@ build_payload() {
       --exclude='app/dashboard/node_modules' \
       -czf "$PAYLOAD_FILE" .
   else
-    [[ "$GITHUB_REPO" != "DEIN-USER/tastyigniter-proxmox" ]] || \
-      die "GITHUB_REPO ist noch der Platzhalter. Setze GITHUB_REPO=USER/REPO oder starte das Script aus einem lokalen Checkout."
+    [[ "$GITHUB_REPO" == */* ]] || \
+      die "GITHUB_REPO muss die Form USER/REPO haben (aktuell: '${GITHUB_REPO}')."
     msg_info "Lade Repository-Archiv von GitHub: ${GITHUB_REPO}@${GITHUB_BRANCH}"
     curl -fsSL --retry 3 --connect-timeout 15 "$REPO_TARBALL_URL" -o "${tmpdir}/repo.tar.gz"
     tar -tzf "${tmpdir}/repo.tar.gz" >/dev/null || die "Heruntergeladenes Repository-Archiv ist ungültig."
