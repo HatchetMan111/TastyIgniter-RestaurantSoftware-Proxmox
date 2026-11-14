@@ -3,7 +3,8 @@
 # TastyIgniter – Proxmox VE Community-Script style installer
 #
 # One-liner (replace DEIN-USER/tastyigniter-proxmox with your repository):
-#   bash -c "$(wget -qLO - https://raw.githubusercontent.com/DEIN-USER/tastyigniter-proxmox/main/install/tastyigniter.sh)"
+#   GITHUB_REPO=DEIN-USER/tastyigniter-proxmox \
+#     bash -c "$(wget -qLO - https://raw.githubusercontent.com/DEIN-USER/tastyigniter-proxmox/main/install/tastyigniter.sh)"
 #
 # Actions:
 #   install     Create or update a TastyIgniter LXC (default)
@@ -156,7 +157,7 @@ on_error() {
 
   echo
   echo "Für einen vollständigen Trace erneut ausführen mit:"
-  echo "  DEBUG=1 bash -c \"\$(wget -qLO - <INSTALL-URL>)\""
+  echo "  GITHUB_REPO=${GITHUB_REPO} DEBUG=1 bash -c \"\$(wget -qLO - <INSTALL-URL>)\""
   echo
   exit "$exit_code"
 }
