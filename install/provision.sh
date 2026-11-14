@@ -574,6 +574,35 @@ if [[ "$HTTP_FAIL" -ne 0 ]]; then
   die "Mindestens ein HTTP-Endpunkt antwortet nicht mit dem erwarteten Status."
 fi
 
+# Storefront and admin load their CSS through the PHP-generated /_assets/
+# bundle. A 404 there leaves the UI unstyled while every page still returns
+# 200, so it has to be verified explicitly.
+verify_asset_bundle() {
+  local page="$1" label="$2"
+  local html path code bytes
+  html="$(curl -sS --max-time 10 "http://127.0.0.1:${APP_PORT}${page}" || true)"
+  path="$(grep -oE '/_assets/[A-Za-z0-9._-]+\.(css|js)' <<< "$html" | head -1 || true)"
+  if [[ -z "$path" ]]; then
+    msg_warn "${label}: kein /_assets/-Bundle im HTML gefunden (übersprungen)."
+    return 0
+  fi
+  read -r code bytes < <(curl -sS -o /dev/null -w '%{http_code} %{size_download}' \
+    --max-time 10 "http://127.0.0.1:${APP_PORT}${path}" || echo "000 0")
+  if [[ "$code" == "200" && "${bytes:-0}" -gt 10000 ]]; then
+    msg_ok "${label}: Asset-Bundle HTTP 200 (${bytes} Byte) – ${path}"
+    return 0
+  fi
+  msg_error "${label}: Asset-Bundle ${path} -> HTTP ${code}, ${bytes:-0} Byte"
+  return 1
+}
+
+ASSET_FAIL=0
+verify_asset_bundle / "Storefront" || ASSET_FAIL=1
+verify_asset_bundle /admin/login "Admin-Login" || ASSET_FAIL=1
+if [[ "$ASSET_FAIL" -ne 0 ]]; then
+  die "CSS/JS-Bundles werden nicht ausgeliefert – die UI erscheint unformatiert. Prüfe die nginx-Regeln für /_assets/ und /livewire/."
+fi
+
 STATUS_JSON="$(curl -sS --max-time 10 "http://127.0.0.1:${APP_PORT}/status/api/status" || true)"
 if ! jq -e '.database.ok and .services.php_fpm and .services.nginx and .services.mariadb' \
      >/dev/null 2>&1 <<< "$STATUS_JSON"; then

@@ -398,6 +398,29 @@ bzw. Netzwerk prüfen und Port `8080/tcp` freigeben. Im Container öffnet das
 Script den Port best effort über UFW; in unprivileged LXCs kann UFW scheitern
 (dann nur Warnung, kein Abbruch).
 
+### Seite lädt, sieht aber unformatiert/„altbacken“ aus
+
+Symptom: Storefront und/oder Admin liefern HTML, aber ohne CSS/JS — große
+Bilder, Standard-Schrift, ungestylte Formulare. Ursache ist dann ein 404 auf
+die dynamischen Bundles `/_assets/…` bzw. `/livewire/…`; die Seiten selbst
+antworten weiterhin mit HTTP 200.
+
+Prüfen:
+
+```bash
+pct exec 123 -- bash -lc 'curl -sS http://127.0.0.1:8080/ | grep -o "/_assets/[^\"]*\.css" | head -1 | xargs -I{} curl -sS -o /dev/null -w "%{http_code}\n" "http://127.0.0.1:8080{}"'
+```
+
+`200` = in Ordnung, `404` = nginx-Konfiguration ist veraltet. Beheben mit:
+
+```bash
+bash -c "$(wget -qLO - https://raw.githubusercontent.com/HatchetMan111/TastyIgniter-RestaurantSoftware-Proxmox/main/install/tastyigniter.sh)" -- update
+```
+
+Das Update schreibt `config/nginx-tastyigniter.conf` neu (Locations für
+`/_assets/`, `/admin/_assets/` und `/livewire/`) und prüft anschließend selbst,
+dass die Bundles mit HTTP 200 und plausibler Größe ausgeliefert werden.
+
 ### Installation fehlgeschlagen
 
 Der Installer zeigt automatisch:

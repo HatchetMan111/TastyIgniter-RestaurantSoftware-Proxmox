@@ -295,6 +295,63 @@ läuft danach mit 32/32 Checks durch.
 
 ---
 
+## Test 8 — Storefront-/Admin-UI ohne Styles (echter Proxmox-Lauf)
+
+Ergebnis: **Fehler gefunden, behoben, mit Selbstprüfung und Regressionstest abgesichert**
+
+Nach der erfolgreichen Installation liefen alle Endpunkte mit HTTP 200, die
+Oberfläche sah aber unformatiert aus. Ursache war nicht TastyIgniter, sondern
+die nginx-Konfiguration: TastyIgniter liefert seine kompilierten CSS/JS-Bundles
+über PHP-Routen, die auf `.css`/`.js` enden:
+
+```text
+/_assets/<hash>.css|js          Storefront
+/admin/_assets/<hash>.css|js    Admin
+/livewire/livewire.min.js       Livewire-Runtime
+```
+
+Die Regel `location ~* \.(css|js|…)$ { try_files $uri =404; }` hat diese
+Anfragen abgefangen und mit nginx-404 beantwortet, statt sie an `index.php`
+weiterzugeben. Ergebnis: kein CSS (nur die CDN-Assets von Font Awesome und
+Leaflet wurden geladen), deshalb der „altbackene“ Eindruck — bei weiterhin
+HTTP 200 auf `/` und `/admin/login`.
+
+Nachgewiesen im Testcontainer:
+
+| Anfrage | vorher | nachher |
+|---|---|---|
+| `/_assets/<hash>.css` (Storefront) | 404, 146 Byte | 200, 356 274 Byte |
+| `/admin/_assets/<hash>.css` (Admin) | 404, 146 Byte | 200, 595 431 Byte |
+| `/livewire/livewire.min.js` | 404, 146 Byte | 200, 167 141 Byte |
+
+Behebung:
+
+- `config/nginx-tastyigniter.conf`: `location ^~`-Blöcke für `/_assets/`,
+  `/admin/_assets/` und `/livewire/`, die per `try_files … /index.php` an die
+  Anwendung gehen. `^~` verhindert, dass die spätere Regex-Regel sie abfängt.
+- `install/provision.sh`: neue Selbstprüfung `verify_asset_bundle`, die das
+  CSS-Bundle aus dem HTML zieht, abruft und HTTP 200 plus > 10 000 Byte
+  verlangt. Ohne diesen Check bleibt der Fehler sonst unbemerkt, weil alle
+  Seiten weiterhin 200 liefern.
+- `tests/local-checks.sh`: Prüfungen auf die drei nginx-Locations und die
+  Selbstprüfung im Provisioner.
+- README-Abschnitt „Seite lädt, sieht aber unformatiert aus“ mit Diagnose und
+  `-- update` als Lösung.
+
+Visuelle Bestätigung nach dem Fix (Playwright, Chromium 1440×1000):
+
+![Storefront](tastyigniter-storefront.png)
+
+![Storefront-Menü](tastyigniter-menu.png)
+
+![Admin-Dashboard](tastyigniter-admin.png)
+
+Zusätzlich geprüft: Login als angelegter Admin führt zu `/admin/dashboard`,
+Administrationsseiten (`/admin/menus`) und Storefront-Menü (`/default/menus`)
+laden ohne lokale 4xx-Antworten.
+
+---
+
 ## Nicht getestet
 
 - `pct create` / `pct start` auf einem echten Proxmox-VE-Host

@@ -79,6 +79,16 @@ check_contains systemd/tastyigniter.service '__PHP_FPM_BIN__'
 check_contains systemd/tastyigniter.service 'Restart=always'
 check_contains systemd/tastyigniter.service 'After=network-online.target'
 
+section "TastyIgniter dynamic assets"
+# TastyIgniter serves compiled CSS/JS and Livewire through PHP routes that end
+# in .css/.js. Without these exclusions the static-file rule answers 404 and
+# the storefront/admin render without styles (exit code stays 0).
+check_contains config/nginx-tastyigniter.conf 'location ^~ /_assets/'
+check_contains config/nginx-tastyigniter.conf 'location ^~ /admin/_assets/'
+check_contains config/nginx-tastyigniter.conf 'location ^~ /livewire/'
+check_contains install/provision.sh 'verify_asset_bundle'
+check_contains install/provision.sh 'Asset-Bundle'
+
 section "Reboot safety"
 check_contains install/tastyigniter.sh '--onboot 1'
 check_contains install/provision.sh 'systemctl enable tastyigniter'
