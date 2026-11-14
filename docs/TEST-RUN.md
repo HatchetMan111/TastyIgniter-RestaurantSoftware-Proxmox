@@ -249,6 +249,52 @@ Stub-`pct`/`pvesh`/`pveam`/`pvesm`-Binaries geprüft:
 
 ---
 
+## Test 7 — Fehlerbild „Exit 127“ beim echten Proxmox-Lauf
+
+Ergebnis: **Fehler gefunden, behoben, mit Regressionstest abgesichert**
+
+Erster echter Lauf auf Proxmox VE 9 (CT 106, Debian-13-Template) brach nach
+dem Payload-Upload ab:
+
+```text
+bash: /opt/tastyigniter-proxmox/install/provision.sh: No such file or directory
+[ERR ]  Installation failed. Exit-Code: 127
+```
+
+Ursache: Ein GitHub-`codeload`-Archiv entpackt immer in genau ein
+Top-Level-Verzeichnis (`TastyIgniter-RestaurantSoftware-Proxmox-main/`). Der
+lokale Pfad (`tar -C "$local_root" … .`) erzeugte dagegen einen Payload ohne
+diese Ebene. Im Container lag `provision.sh` daher unter
+`/opt/tastyigniter-proxmox/<REPO-BRANCH>/install/provision.sh`.
+
+Behebung:
+
+- Neue Funktion `payload_from_github_archive()` entpackt das Archiv,
+  ermittelt das einzige Top-Level-Verzeichnis und packt den Payload neu, sodass
+  `install/`, `config/`, `app/` direkt in der Wurzel liegen.
+- Fehlt `install/provision.sh`, bricht der Installer mit einer erklärenden
+  Meldung ab (statt Exit 127).
+- Der Container-Befehl prüft den entpackten Payload zusätzlich und gibt bei
+  Bedarf `ls -la /opt/tastyigniter-proxmox` aus.
+- Regressionstest in `tests/local-checks.sh` („GitHub payload normalisation“):
+  synthetisches GitHub-Archiv mit Top-Level-Verzeichnis, Prüfung auf
+  `./install/provision.sh` in der Wurzel, Prüfung, dass das Top-Level-Verzeichnis
+  entfernt wurde, und Prüfung, dass ein Archiv ohne `provision.sh` abgelehnt
+  wird.
+
+Zusätzlich gegen das echte Release-Archiv geprüft:
+
+```bash
+curl -fsSL https://codeload.github.com/HatchetMan111/TastyIgniter-RestaurantSoftware-Proxmox/tar.gz/refs/heads/main -o dl.tar.gz
+# Archivwurzel: TastyIgniter-RestaurantSoftware-Proxmox-main/
+# nach Normalisierung: ./install/provision.sh, ./app/dashboard/dist/index.html, ./README.md
+```
+
+Ergebnis: `normalize_rc=0`, Payload-Wurzel korrekt. `tests/local-checks.sh`
+läuft danach mit 32/32 Checks durch.
+
+---
+
 ## Nicht getestet
 
 - `pct create` / `pct start` auf einem echten Proxmox-VE-Host

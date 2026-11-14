@@ -387,6 +387,37 @@ wait_for_ip() {
   return 1
 }
 
+PATH_PAYLOAD_EXCLUDES=(
+  --exclude='.git'
+  --exclude='node_modules'
+  --exclude='app/dashboard/node_modules'
+)
+
+# Erzeugt aus einem GitHub-Archiv (codeload tar.gz) ein Payload-Archiv, dessen
+# Wurzel direkt install/, config/, app/ … enthält. GitHub-Archive haben genau
+# ein Top-Level-Verzeichnis (REPO-BRANCH/), das hier entfernt wird. Ohne diesen
+# Schritt liegt provision.sh im Container unter /opt/tastyigniter-proxmox/
+# REPO-BRANCH/install/provision.sh und der Installer scheitert mit Exit 127.
+payload_from_github_archive() {
+  local archive="$1" out="$2" workdir="$3"
+  local extract="${workdir}/repo-extract"
+  rm -rf "$extract"
+  mkdir -p "$extract"
+  tar -xzf "$archive" -C "$extract" --no-same-owner || return 1
+
+  local root="$extract" entries=()
+  mapfile -t entries < <(find "$extract" -mindepth 1 -maxdepth 1 2>/dev/null | sort)
+  if [[ ${#entries[@]} -eq 1 && -d "${entries[0]}" ]]; then
+    root="${entries[0]}"
+  fi
+
+  [[ -f "${root}/install/provision.sh" ]] || return 2
+  tar -C "$root" "${PATH_PAYLOAD_EXCLUDES[@]}" -czf "$out" . || return 3
+  [[ -s "$out" ]] || return 4
+  rm -rf "$extract"
+  return 0
+}
+
 build_payload() {
   local tmpdir
   tmpdir="$(mktemp -d /tmp/tastyigniter-payload.XXXXXX)"
@@ -405,16 +436,25 @@ build_payload() {
   if [[ -n "$local_root" ]]; then
     msg_info "Verwende lokales Repository: ${local_root}"
     tar -C "$local_root" \
-      --exclude='.git' \
-      --exclude='node_modules' \
-      --exclude='app/dashboard/node_modules' \
+      "${PATH_PAYLOAD_EXCLUDES[@]}" \
       -czf "$PAYLOAD_FILE" .
   else
     [[ "$GITHUB_REPO" == */* ]] || \
       die "GITHUB_REPO muss die Form USER/REPO haben (aktuell: '${GITHUB_REPO}')."
     msg_info "Lade Repository-Archiv von GitHub: ${GITHUB_REPO}@${GITHUB_BRANCH}"
-    curl -fsSL --retry 3 --connect-timeout 15 "$REPO_TARBALL_URL" -o "${tmpdir}/repo.tar.gz"
-    tar -tzf "${tmpdir}/repo.tar.gz" >/dev/null || die "Heruntergeladenes Repository-Archiv ist ungültig."
+    local download="${tmpdir}/repo-download.tar.gz"
+    curl -fsSL --retry 3 --connect-timeout 15 "$REPO_TARBALL_URL" -o "$download"
+    tar -tzf "$download" >/dev/null || die "Heruntergeladenes Repository-Archiv ist ungültig."
+
+    msg_info "Normalisiere Repository-Struktur (GitHub-Top-Level-Verzeichnis entfernen) …"
+    local rc=0
+    payload_from_github_archive "$download" "$PAYLOAD_FILE" "$tmpdir" || rc=$?
+    case "$rc" in
+      0) ;;
+      2) die "Repository-Archiv enthält kein install/provision.sh. Prüfe GITHUB_REPO/GITHUB_BRANCH: ${GITHUB_REPO}@${GITHUB_BRANCH}." ;;
+      *) die "Repository-Archiv konnte nicht normalisiert werden (Code ${rc})." ;;
+    esac
+    rm -f "$download"
   fi
 
   [[ -s "$PAYLOAD_FILE" ]] || die "Repository-Payload konnte nicht erstellt werden."
@@ -628,6 +668,12 @@ do_install() {
       rm -rf /opt/tastyigniter-proxmox
       mkdir -p /opt/tastyigniter-proxmox
       tar -xzf /tmp/tastyigniter-proxmox.tar.gz -C /opt/tastyigniter-proxmox
+      if [[ ! -f /opt/tastyigniter-proxmox/install/provision.sh ]]; then
+        echo "Payload unvollstaendig: install/provision.sh fehlt in /opt/tastyigniter-proxmox" >&2
+        echo "Inhalt von /opt/tastyigniter-proxmox:" >&2
+        ls -la /opt/tastyigniter-proxmox >&2
+        exit 1
+      fi
       bash /opt/tastyigniter-proxmox/install/provision.sh
     '
 
@@ -670,6 +716,12 @@ do_update() {
       rm -rf /opt/tastyigniter-proxmox
       mkdir -p /opt/tastyigniter-proxmox
       tar -xzf /tmp/tastyigniter-proxmox.tar.gz -C /opt/tastyigniter-proxmox
+      if [[ ! -f /opt/tastyigniter-proxmox/install/provision.sh ]]; then
+        echo "Payload unvollstaendig: install/provision.sh fehlt in /opt/tastyigniter-proxmox" >&2
+        echo "Inhalt von /opt/tastyigniter-proxmox:" >&2
+        ls -la /opt/tastyigniter-proxmox >&2
+        exit 1
+      fi
       bash /opt/tastyigniter-proxmox/install/provision.sh
     '
 

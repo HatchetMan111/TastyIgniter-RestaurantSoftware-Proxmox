@@ -108,6 +108,59 @@ else
   bad "app/dashboard/dist/index.html missing"
 fi
 
+section "GitHub payload normalisation"
+# Regression guard: GitHub tar.gz archives have a single top-level directory
+# (REPO-BRANCH/). The installer must strip it, otherwise provision.sh ends up
+# at /opt/tastyigniter-proxmox/REPO-BRANCH/install/provision.sh and the
+# install fails with exit code 127.
+if grep -Fq 'payload_from_github_archive()' install/tastyigniter.sh; then
+  ok "installer defines payload_from_github_archive()"
+else
+  bad "installer lacks payload_from_github_archive()"
+fi
+
+fixture="$(mktemp -d /tmp/tastyigniter-payload-check.XXXXXX)"
+trap 'rm -rf "$fixture"' EXIT
+mkdir -p "$fixture/src/repo-main"
+cp -a install config systemd "$fixture/src/repo-main"
+tar -C "$fixture/src" -czf "$fixture/github-style.tar.gz" repo-main
+
+if bash -c '
+  set -Eeuo pipefail
+  PATH_PAYLOAD_EXCLUDES=(--exclude=.git --exclude=node_modules --exclude=app/dashboard/node_modules)
+  '"$(sed -n '/^payload_from_github_archive()/,/^}/p' install/tastyigniter.sh)"'
+  payload_from_github_archive "$1" "$2" "$3"
+' _ "$fixture/github-style.tar.gz" "$fixture/payload.tar.gz" "$fixture"; then
+  ok "normalisation exits 0 for a GitHub-style archive"
+else
+  bad "normalisation failed for a GitHub-style archive"
+fi
+
+if tar -tzf "$fixture/payload.tar.gz" | grep -qx './install/provision.sh'; then
+  ok "payload root contains install/provision.sh"
+else
+  bad "payload root lacks install/provision.sh (top-level dir not stripped)"
+fi
+
+if tar -tzf "$fixture/payload.tar.gz" | grep -q '^\./repo-main/'; then
+  bad "payload still contains the GitHub top-level directory"
+else
+  ok "GitHub top-level directory removed"
+fi
+
+mkdir -p "$fixture/bad/repo-main"
+tar -C "$fixture/bad" -czf "$fixture/no-provision.tar.gz" repo-main
+if bash -c '
+  set -Eeuo pipefail
+  PATH_PAYLOAD_EXCLUDES=()
+  '"$(sed -n '/^payload_from_github_archive()/,/^}/p' install/tastyigniter.sh)"'
+  payload_from_github_archive "$1" "$2" "$3"
+' _ "$fixture/no-provision.tar.gz" "$fixture/bad-payload.tar.gz" "$fixture" >/dev/null 2>&1; then
+  bad "normalisation accepted an archive without install/provision.sh"
+else
+  ok "normalisation rejects an archive without install/provision.sh"
+fi
+
 section "Summary"
 printf 'Passed: %d   Failed: %d\n' "$PASS" "$FAIL"
 if [[ "$FAIL" -ne 0 ]]; then
