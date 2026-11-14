@@ -1,0 +1,21 @@
+[Unit]
+Description=TastyIgniter – Restaurant Ordering Platform (PHP-FPM)
+Documentation=https://tastyigniter.com/docs
+After=network-online.target mariadb.service
+Wants=network-online.target
+Requires=mariadb.service
+ConditionPathExists=/opt/tastyigniter/artisan
+
+[Service]
+Type=notify
+ExecStartPre=/usr/local/bin/tastyigniter-update-url
+ExecStart=__PHP_FPM_BIN__ --nodaemonize --fpm-config /etc/php/__PHP_VER__/fpm/php-fpm.conf
+ExecReload=/bin/kill -USR2 $MAINPID
+Restart=always
+RestartSec=5s
+TimeoutStartSec=90
+TimeoutStopSec=30
+LimitNOFILE=65535
+
+[Install]
+WantedBy=multi-user.target

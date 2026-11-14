@@ -1,0 +1,25 @@
+# Dependencies
+node_modules/
+app/dashboard/node_modules/
+
+# Build cache (the built dist/ directory is intentionally committed so the
+# installer does not need Node.js inside the LXC)
+app/dashboard/.vite/
+
+# Local env / secrets
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+logs/
+
+# Editor / OS
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Temporary payloads
+*.tar.gz

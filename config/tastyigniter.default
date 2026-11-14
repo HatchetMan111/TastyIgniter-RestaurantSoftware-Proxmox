@@ -1,0 +1,6 @@
+# TastyIgniter runtime defaults (read by /usr/local/bin/tastyigniter-update-url)
+APP_PORT=8080
+AUTO_APP_URL=1
+
+# Set this when the instance is reached through a domain or reverse proxy, e.g.:
+# APP_URL_OVERRIDE=https://restaurant.example.com
